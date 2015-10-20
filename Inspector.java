@@ -3,10 +3,26 @@ import java.lang.reflect.*;
 import java.util.*;
 
 public class Inspector {
+	private final static String CLASSSPACE = "============================================\n";
+	private final static String LINEDIVIDE = "--------------------------------\n";
 	private List<Class<?>> storedObj;
 	
 	public Inspector(){
 		storedObj = new ArrayList<Class<?>>();
+	}
+	private Object[] getAllDeclaredFields(Object obj){
+		List<Object> ary = new ArrayList<Object>();
+		Class<?> cls = obj.getClass();
+
+		Field[] f;
+		while (cls != null){
+			f = cls.getDeclaredFields();
+			for (int i = 0; i < f.length; i++){
+				ary.add(f[i]);
+			}
+			cls = cls.getSuperclass();
+		}
+		return ary.toArray();
 	}
 	
 	public void inspect(Object obj, boolean recursive){
@@ -16,55 +32,81 @@ public class Inspector {
 		}
 		
 		storedObj.add(obj.getClass());
-		Field[] f = getAllDeclaredFields(obj);
-		for (int i = 0; i < f.length; i++) {
-			if ((recursive) && (!f[i].getType().isPrimitive()) && (!f[i].getType().isArray())){
-				if (storedObj.contains(f[i].getDeclaringClass())) {
-					storedObj.add(f[i].getType());
+		Object[] scrapedFields = getAllDeclaredFields(obj);
+		for (int i = 0; i < scrapedFields.length; i++) {
+			Class<?> var = scrapedFields.getClass();
+			if ((!var.isInstance(Field.class)) && recursive){
+				if (!storedObj.contains(var)){
+					storedObj.add(var);
 				}
 			}
 		}
-		
 		for (Class<?> c: storedObj){
-			System.out.println(outString(c));
+			System.out.println(formattedOutpuet(c));
 		}
 	}
-	private String outString(Class<?> c){
+	private String formattedOutpuet(Class<?> c){
 		String s = "";
-		Class[] exceptions;
-		Class[] parameters;
-		Method[] m = c.getDeclaredMethods();
-		int i, j;
 		
+		s += CLASSSPACE;
 		// Class header info
-		s += "Class: " + c.getName() + "\n";
-		s += "Super: " + c.getSuperclass() + "\n";
+		s += "Class: " + c.getSimpleName() + "\n";
+		s += "Super: " + c.getSuperclass().getName() + "\n";
 		Class<?>[] iface = c.getInterfaces();
-		for (i = 0; i < iface.length; i++){
+		for (int i = 0; i < iface.length; i++){
 			s += "Iface: " + iface[i].getName() + "\n";
 		}
 		
-		// Constructor info
-		Constructor<?>[] con = c.getConstructors();
-		for (i = 0; i < con.length; i++){
-			s += "Constructor: " + con[i].getName() + "\n";
-			
-			s += "\tParameters:\n";
-			parameters = con[i].getParameterTypes();
-			for(j = 0; j < parameters.length; j++){
-				s += "\t\t" + parameters[j].getName() + "\n";
-			}
-			
-			s += "\tModifiers\n";
-			s += "\t\t" + con[i].getModifiers() + "\n";
-		}
-		
 		// Field Info
+		s += formattedFields(c);
+		s += formattedConstructor(c);
+		s += formattedMethod(c);
+
+		return s;
+	}
+	
+	private String formattedFields(Class<?> c){
+		String s = "";
+		Field[] f = c.getDeclaredFields();
+		Field.setAccessible(f, true);
 		
+
+		for (int i = 0; i < f.length; i++){
+			s += LINEDIVIDE;
+			s += "Field: " + "\tname:\t" + f[i].getName() + "\n";
+			if (f[i].getType().isPrimitive()){
+				s += "\ttype:\t" + f[i].getType() + "\n";
+				try {
+					Object val = f[i].get(c);
+					s += "\tval:\t" + val.toString() + "\n";
+				} catch (IllegalArgumentException e) {
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					e.printStackTrace();
+				}
+				s += "\tmod:\t" + "\n";
+			} else if(f[i].getType().isArray()){
+				s += "\ttype:\t" + f[i].getType() + "\n";
+				s += "\tval:\t" + "\n";
+				s += "\tmod:\t" + "\n";
+			} else {
+				s += "\ttype:\t" + f[i].getType() + "\n";
+				s += "\tval:\t" + "\n";
+				s += "\tmod:\t" + "\n";
+			}
+		}
+		return s + "\n";
+	}
+	
+	private String formattedMethod(Class<?> c){
+		Method[] m = c.getDeclaredMethods();
+		Class<?>[] exceptions;
+		Class<?>[] parameters;
+		String s = "";
+		int i, j;
 		
-		
-		// Method info
 		for (i = 0; i < m.length; i++){
+			s += LINEDIVIDE;
 			s += "method: " + m[i].getName() + "\n";
 			
 			s += "\tExceptions:\n";
@@ -79,24 +121,39 @@ public class Inspector {
 				s += "\t\t" + parameters[j].getName() + "\n";
 			}
 			
-			s += "\tModifiers\n";
-			s += "\t\t" + m[i].getModifiers() + "\n";
+			s += "\tModifier: ";
+			s += m[i].getModifiers() + "\n";
+
 		}
 
 		return s;
 	}
-	
-	private Field[] getAllDeclaredFields(Object obj){
-		List<Field> ary = new ArrayList<Field>();
-		Class<?> cls = obj.getClass();
-		Field[] f;
-		while (cls != null){
-			f = cls.getDeclaredFields();
-			for (int i = 0; i < f.length; i++){
-				ary.add(f[i]);
+	private String formattedConstructor(Class<?> c){
+		Class<?>[] parameters;
+		String s = "";
+		int i, j;
+
+		// Constructor info
+		Constructor<?>[] con = c.getConstructors();
+		for (i = 0; i < con.length; i++){
+			s += LINEDIVIDE;
+			s += "Constructor: " + con[i].getName() + "\n";
+			
+			
+			s += "             Parameters: ";
+			parameters = con[i].getParameterTypes();
+			if (parameters.length == 0){s+= "N/A\n";}
+			for(j = 0; j < parameters.length; j++){
+				if (j == 0){
+					s += parameters[j].getName() + "\n";
+				}
+				s += "                         " + parameters[j].getName() + "\n";
 			}
-			cls = cls.getSuperclass();
+			
+			s += "             Modifier: ";
+			s += con[i].getModifiers() + "\n";
 		}
-		return ((Field[]) ary.toArray());
+		return s;
 	}
+
 }
