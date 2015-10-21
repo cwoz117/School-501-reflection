@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Inspector {
 	private final static String CLASSSPACE = "============================================\n";
-	private final static String LINEDIVIDE = "--------------------------------\n";
+	private final static String LINEDIVIDE = "--------------------------------------\n";
 	private List<Class<?>> storedObj;
 	
 	public Inspector(){
@@ -42,10 +42,10 @@ public class Inspector {
 			}
 		}
 		for (Class<?> c: storedObj){
-			System.out.println(formattedOutpuet(c));
+			System.out.println(formattedOutput(c));
 		}
 	}
-	private String formattedOutpuet(Class<?> c){
+	private String formattedOutput(Class<?> c){
 		String s = "";
 		
 		s += CLASSSPACE;
@@ -70,29 +70,46 @@ public class Inspector {
 		Field[] f = c.getDeclaredFields();
 		Field.setAccessible(f, true);
 		
-
 		for (int i = 0; i < f.length; i++){
+
 			s += LINEDIVIDE;
 			s += "Field: " + "\tname:\t" + f[i].getName() + "\n";
-			if (f[i].getType().isPrimitive()){
-				s += "\ttype:\t" + f[i].getType() + "\n";
-				try {
-					Object val = f[i].get(c);
-					s += "\tval:\t" + val.toString() + "\n";
-				} catch (IllegalArgumentException e) {
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
-					e.printStackTrace();
+			try {
+				if (f[i].getType().isPrimitive()){
+					Object classInstance = f[i].get(c.newInstance());
+					s += "\ttype:\t" + classInstance.getClass().getTypeName() + "\n";
+					s += "\tval:\t" + classInstance.toString() + "\n";
+					s += "\tmod:\t" + Modifier.toString(classInstance.getClass().getModifiers()) + "\n";
+				} else if(f[i].getType().isArray()){
+					int aryIndex = Array.getLength(f[i].get(c.newInstance()));
+					Object[] classInstance = (Object[]) Array.newInstance(f[i].getType(), aryIndex);
+					s += "\ttype:\t" + classInstance.getClass().getName() + "\n\tval:\t";
+					for (int j = 0; j < aryIndex; j++){
+						if (j%4 == 0 && j != 0){
+							s += "\n\t\t";
+						}
+						if (classInstance[i] == null){
+							s += "null ";
+						}else {
+							s += classInstance[i].toString() +" ";
+						}
+					}
+					s += "\n\tmod:\t" + Modifier.toString(classInstance.getClass().getModifiers());
+				} else {
+					Object classInstance = f[i].get(c.newInstance());
+					s += "\ttype:\t" + f[i].getType() + "\n";
+					if (classInstance != null){
+						s += "\tval:\t" + classInstance.toString() + "\n";
+					} else {
+						s += "\tval:\t" + "null" + "\n";
+					}
 				}
-				s += "\tmod:\t" + "\n";
-			} else if(f[i].getType().isArray()){
-				s += "\ttype:\t" + f[i].getType() + "\n";
-				s += "\tval:\t" + "\n";
-				s += "\tmod:\t" + "\n";
-			} else {
-				s += "\ttype:\t" + f[i].getType() + "\n";
-				s += "\tval:\t" + "\n";
-				s += "\tmod:\t" + "\n";
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
 			}
 		}
 		return s + "\n";
@@ -122,7 +139,7 @@ public class Inspector {
 			}
 			
 			s += "\tModifier: ";
-			s += m[i].getModifiers() + "\n";
+			s += Modifier.toString(m[i].getModifiers()) + "\n";
 
 		}
 
@@ -151,7 +168,7 @@ public class Inspector {
 			}
 			
 			s += "             Modifier: ";
-			s += con[i].getModifiers() + "\n";
+			s += Modifier.toString(con[i].getModifiers()) + "\n";
 		}
 		return s;
 	}
