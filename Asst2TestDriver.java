@@ -19,9 +19,10 @@ public class Asst2TestDriver
     public Asst2TestDriver(String ObjInspectorName, boolean recursive)
 	throws Exception
     {
-	this.recursive=recursive;
-	setObjectInspectorInfo(ObjInspectorName);
+    	this.recursive=recursive;
+    	setObjectInspectorInfo(ObjInspectorName);
     }
+    
     //--------------------------------------------------------------------
     public void setObjectInspectorInfo(String ObjectInspectorName)
 	throws Exception

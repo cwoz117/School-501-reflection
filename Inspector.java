@@ -3,14 +3,14 @@ import java.lang.reflect.*;
 import java.util.*;
 
 public class Inspector {
-	private final static String CLASSSPACE = "============================================\n";
-	private final static String LINEDIVIDE = "--------------------------------------\n";
+	private final static String LINEDIVIDE = "------------------------------------\n";
 	private List<Class<?>> storedObj;
-	
-	public Inspector(){
-		storedObj = new ArrayList<Class<?>>();
-	}
+
 	private Object[] getAllDeclaredFields(Object obj){
+
+		if (obj == null){
+			return null;
+		}
 		List<Object> ary = new ArrayList<Object>();
 		Class<?> cls = obj.getClass();
 
@@ -30,14 +30,17 @@ public class Inspector {
 		if (obj == null){
 			throw new IllegalArgumentException("The object is null, nothing to inspect");
 		}
-		
+		storedObj = new ArrayList<Class<?>>();
 		storedObj.add(obj.getClass());
-		Object[] scrapedFields = getAllDeclaredFields(obj);
-		for (int i = 0; i < scrapedFields.length; i++) {
-			Class<?> var = scrapedFields.getClass();
-			if ((!var.isInstance(Field.class)) && recursive){
-				if (!storedObj.contains(var)){
-					storedObj.add(var);
+
+		if (recursive){
+			Object[] scrapedFields = getAllDeclaredFields(obj);
+			for (int i = 0; i < scrapedFields.length; i++) {
+				Class<?> var = scrapedFields.getClass();
+				if ((!var.isInstance(Field.class)) && recursive){
+					if (!storedObj.contains(var)){
+						storedObj.add(var);
+					}
 				}
 			}
 		}
@@ -48,7 +51,6 @@ public class Inspector {
 	private String formattedOutput(Class<?> c){
 		String s = "";
 		
-		s += CLASSSPACE;
 		// Class header info
 		s += "Class: " + c.getSimpleName() + "\n";
 		s += "Super: " + c.getSuperclass().getName() + "\n";
@@ -155,7 +157,6 @@ public class Inspector {
 		for (i = 0; i < con.length; i++){
 			s += LINEDIVIDE;
 			s += "Constructor: " + con[i].getName() + "\n";
-			
 			
 			s += "             Parameters: ";
 			parameters = con[i].getParameterTypes();
